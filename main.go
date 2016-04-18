@@ -19,20 +19,10 @@ func main() {
 		log.Fatalln("failed to read configuration file", err)
 	}
 
-	localPath := "IMGP8896.JPG"
-	imgData, err := ioutil.ReadFile(localPath)
-	if err != nil {
-		log.Fatalln("failed to read image file", err)
-	}
-
 	cfg, err := google.JWTConfigFromJSON([]byte(confFile), vision.CloudPlatformScope)
 	client := cfg.Client(context.Background())
-
 	svc, err := vision.New(client)
-	enc := base64.StdEncoding.EncodeToString([]byte(imgData))
-	img := &vision.Image{Content: enc}
 
-	features := make([]*vision.Feature, 2)
 	// Possible values:
 	//   "TYPE_UNSPECIFIED" - Unspecified feature type.
 	//   "FACE_DETECTION" - Run face detection.
@@ -42,6 +32,7 @@ func main() {
 	//   "TEXT_DETECTION" - Run OCR.
 	//   "SAFE_SEARCH_DETECTION" - Run various computer vision models to
 	//   "IMAGE_PROPERTIES" - compute image safe-search properties.
+	features := make([]*vision.Feature, 2)
 	features[0] = &vision.Feature{
 		Type:       "LABEL_DETECTION",
 		MaxResults: 5,
@@ -51,16 +42,33 @@ func main() {
 		MaxResults: 5,
 	}
 
-	req := &vision.AnnotateImageRequest{
-		Image:    img,
-		Features: features,
+	requests := make([]*vision.AnnotateImageRequest, 2)
+	images := []string{"images/IMGP8896.JPG", "images/IMGP9629.JPG"}
+
+	for i := 0; i < len(images); i++ {
+		imgData, _ := ioutil.ReadFile(images[i])
+		enc := base64.StdEncoding.EncodeToString([]byte(imgData))
+		img := &vision.Image{Content: enc}
+		requests[i] = &vision.AnnotateImageRequest{
+			Image:    img,
+			Features: features,
+		}
 	}
 
 	batch := &vision.BatchAnnotateImagesRequest{
-		Requests: []*vision.AnnotateImageRequest{req},
+		Requests: requests,
 	}
 	res, err := svc.Images.Annotate(batch).Do()
 
-	body, err := json.MarshalIndent(res.Responses[0], "", "\t")
-	fmt.Println(string(body))
+	var result string
+
+	for i := 0; i < len(images); i++ {
+		body, err := json.MarshalIndent(res.Responses[i], "", "\t")
+		if err != nil {
+			fmt.Println("Responses error")
+			fmt.Println(err)
+		}
+		result += string(body)
+	}
+	fmt.Println(result)
 }
