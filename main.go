@@ -1,6 +1,10 @@
 package main
 
 import (
+	"errors"
+	"flag"
+	"strings"
+
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2/google"
 
@@ -8,20 +12,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 
 	"google.golang.org/api/vision/v1"
 )
 
-func main() {
-	confFile, err := ioutil.ReadFile("google_credentials.json")
-	if err != nil {
-		log.Fatalln("Failed to read credential file. Please add 'google_credentials.json'", err)
-	}
-
-	cfg, err := google.JWTConfigFromJSON([]byte(confFile), vision.CloudPlatformScope)
-	client := cfg.Client(context.Background())
-	svc, err := vision.New(client)
+func generateFeatures(typeStr string) ([]*vision.Feature, error) {
+	types := strings.Split(typeStr, ",")
+	features := make([]*vision.Feature, len(types))
+	var featureType string
 
 	// Possible values:
 	//   "TYPE_UNSPECIFIED" - Unspecified feature type.
@@ -32,18 +30,62 @@ func main() {
 	//   "TEXT_DETECTION" - Run OCR.
 	//   "SAFE_SEARCH_DETECTION" - Run various computer vision models to
 	//   "IMAGE_PROPERTIES" - compute image safe-search properties.
-	features := make([]*vision.Feature, 2)
-	features[0] = &vision.Feature{
-		Type:       "LABEL_DETECTION",
-		MaxResults: 5,
+	for i := 0; i < len(types); i++ {
+		switch types[i] {
+		case "face":
+			featureType = "FACE_DETECTION"
+		case "landmark":
+			featureType = "LANDMARK_DETECTION"
+		case "logo":
+			featureType = "LOGO_DETECTION"
+		case "label":
+			featureType = "LABEL_DETECTION"
+		case "text":
+			featureType = "TEXT_DETECTION"
+		case "safe_search":
+			featureType = "SAFE_SEARCH_DETECTION"
+		case "image_properties":
+			featureType = "IMAGE_PROPERTIES"
+		default:
+			errorMsg := "Invalid feature: " + types[i]
+			return nil, errors.New(errorMsg)
+		}
+
+		features[i] = &vision.Feature{
+			Type:       featureType,
+			MaxResults: 5,
+		}
 	}
-	features[1] = &vision.Feature{
-		Type:       "TEXT_DETECTION",
-		MaxResults: 5,
+	return features, nil
+}
+
+func main() {
+	confFile, err := ioutil.ReadFile("google_credentials.json")
+	if err != nil {
+		fmt.Println("Failed to read credential file. Please add 'google_credentials.json'", err)
+		return
 	}
 
-	requests := make([]*vision.AnnotateImageRequest, 2)
-	images := []string{"images/IMGP8896.JPG", "images/IMGP9629.JPG"}
+	var typeStr = flag.String("feature", "label,text", "face, landmark, logo, label, text, safe_search, image_properties")
+	var image = flag.String("image", "", "image file path")
+	flag.Parse()
+	if *image == "" {
+		fmt.Println("Please specify image file name")
+		return
+	}
+
+	cfg, err := google.JWTConfigFromJSON([]byte(confFile), vision.CloudPlatformScope)
+	client := cfg.Client(context.Background())
+	svc, err := vision.New(client)
+
+	features, err := generateFeatures(*typeStr)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	requests := make([]*vision.AnnotateImageRequest, 1)
+	images := []string{*image}
 
 	for i := 0; i < len(images); i++ {
 		imgData, _ := ioutil.ReadFile(images[i])
