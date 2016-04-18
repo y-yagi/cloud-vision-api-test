@@ -16,7 +16,7 @@ import (
 func main() {
 	confFile, err := ioutil.ReadFile("google_credentials.json")
 	if err != nil {
-		log.Fatalln("failed to read configuration file", err)
+		log.Fatalln("Failed to read credential file. Please add 'google_credentials.json'", err)
 	}
 
 	cfg, err := google.JWTConfigFromJSON([]byte(confFile), vision.CloudPlatformScope)
