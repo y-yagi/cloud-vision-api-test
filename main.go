@@ -53,7 +53,7 @@ func generateFeatures(typeStr string) ([]*vision.Feature, error) {
 
 		features[i] = &vision.Feature{
 			Type:       featureType,
-			MaxResults: 5,
+			MaxResults: 10,
 		}
 	}
 	return features, nil
