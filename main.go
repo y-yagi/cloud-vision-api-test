@@ -32,6 +32,7 @@ func main() {
 	enc := base64.StdEncoding.EncodeToString([]byte(imgData))
 	img := &vision.Image{Content: enc}
 
+	features := make([]*vision.Feature, 2)
 	// Possible values:
 	//   "TYPE_UNSPECIFIED" - Unspecified feature type.
 	//   "FACE_DETECTION" - Run face detection.
@@ -41,14 +42,18 @@ func main() {
 	//   "TEXT_DETECTION" - Run OCR.
 	//   "SAFE_SEARCH_DETECTION" - Run various computer vision models to
 	//   "IMAGE_PROPERTIES" - compute image safe-search properties.
-	feature := &vision.Feature{
+	features[0] = &vision.Feature{
 		Type:       "LABEL_DETECTION",
+		MaxResults: 5,
+	}
+	features[1] = &vision.Feature{
+		Type:       "TEXT_DETECTION",
 		MaxResults: 5,
 	}
 
 	req := &vision.AnnotateImageRequest{
 		Image:    img,
-		Features: []*vision.Feature{feature},
+		Features: features,
 	}
 
 	batch := &vision.BatchAnnotateImagesRequest{
