@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"flag"
+	"os"
 	"strings"
 
 	"golang.org/x/net/context"
@@ -103,6 +104,11 @@ func main() {
 	res, err := svc.Images.Annotate(batch).Do()
 
 	var result string
+
+	if err != nil {
+		fmt.Printf("API error: %s\n", err)
+		os.Exit(1)
+	}
 
 	for i := 0; i < len(images); i++ {
 		body, err := json.MarshalIndent(res.Responses[i], "", "\t")
